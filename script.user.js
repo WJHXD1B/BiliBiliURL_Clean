@@ -84,3 +84,5 @@
     window.addEventListener('popstate', checkAndClean);
     window.addEventListener('hashchange', checkAndClean);
 })();
+
+console.log('%c BiliURLc %c Author/作者:LongSir', 'background: linear-gradient(120deg, #8183ff, #58b3f5);color:#fff;border-radius:2px;', '');
