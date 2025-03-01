@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         B站视频URL清理
+// @name         Bilibili-B站视频URL清理
 // @namespace    http://tampermonkey.net/
 // @version      0.1
 // @description  清除B站视频链接不必要的参数
