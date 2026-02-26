@@ -1,33 +1,43 @@
 // ==UserScript==
 // @name         Bilibili-B站视频URL清理
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.2
 // @description  清除B站视频链接不必要的参数
 // @author       LongSir
+// @license      MIT
 // @match        https://www.bilibili.com/video/*
+// @match        https://www.bilibili.com/bangumi/*
 // @grant        none
 // @run-at       document-start
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
 
-    // 核心清理函数（支持非标准URL解析）
+    // 需要保留的参数白名单
+    const KEEP_PARAMS = new Set(['p', 't']);
+
+    // 核心清理函数
     const cleanUrl = (url) => {
         if (!url) return url;
         try {
-            // 预处理：移除路径末尾斜杠
-            const sanitizedUrl = url.replace(/(https?:\/\/[^/]+\/video\/[^/?]+)\/+/, '$1');
-            const urlObj = new URL(sanitizedUrl);
+            const urlObj = new URL(url);
 
-            // 提取p参数
+            // 提取需要保留的参数
             const params = new URLSearchParams(urlObj.search);
-            const pValue = params.get('p');
+            const kept = new URLSearchParams();
+            for (const key of KEEP_PARAMS) {
+                if (params.has(key)) {
+                    kept.set(key, params.get(key));
+                }
+            }
 
             // 重建纯净URL
-            let cleanHref = `${urlObj.origin}${urlObj.pathname.replace(/\/+$/, '')}`;
-            if (pValue) {
-                cleanHref += `?p=${encodeURIComponent(pValue)}`;
+            const cleanPath = urlObj.pathname.replace(/\/+$/, '');
+            const search = kept.toString();
+            let cleanHref = `${urlObj.origin}${cleanPath}`;
+            if (search) {
+                cleanHref += `?${search}`;
             }
             if (urlObj.hash) {
                 cleanHref += urlObj.hash;
@@ -39,50 +49,61 @@
             const cleanBase = base.replace(/\/+$/, '');
             if (!query) return cleanBase;
 
-            const pMatch = query.match(/[&?]p=([^&]*)/);
-            return pMatch
-                ? `${cleanBase}?p=${encodeURIComponent(pMatch[1])}`
+            const kept = [];
+            for (const key of KEEP_PARAMS) {
+                const match = query.match(new RegExp(`(?:^|&)${key}=([^&]*)`));
+                if (match) {
+                    kept.push(`${key}=${encodeURIComponent(match[1])}`);
+                }
+            }
+            return kept.length > 0
+                ? `${cleanBase}?${kept.join('&')}`
                 : cleanBase;
         }
     };
 
-    // 代理history方法
-    const proxyHistoryMethod = () => {
-        const origPush = history.pushState;
-        const origReplace = history.replaceState;
+    // 保存原始 history 方法引用
+    const origPush = history.pushState.bind(history);
+    const origReplace = history.replaceState.bind(history);
 
-        history.pushState = function(state, title, url) {
-            return origPush.call(this, state, title, cleanUrl(url));
-        };
-
-        history.replaceState = function(state, title, url) {
-            return origReplace.call(this, state, title, cleanUrl(url));
-        };
+    // 代理 history 方法
+    history.pushState = function (state, title, url) {
+        return origPush(state, title, cleanUrl(url));
     };
 
-    // 初始化处理
-    proxyHistoryMethod();
+    history.replaceState = function (state, title, url) {
+        return origReplace(state, title, cleanUrl(url));
+    };
+
+    // 初始化：使用原始方法避免双重清理
     const initialClean = cleanUrl(location.href);
     if (initialClean !== location.href) {
-        history.replaceState(null, '', initialClean);
+        origReplace(null, '', initialClean);
     }
 
-    // 动态URL监控
+    // 动态URL监控（防抖）
     let lastHref = location.href;
+    let debounceTimer = null;
+
     const checkAndClean = () => {
-        if (location.href === lastHref) return;
-        lastHref = location.href;
-        const cleaned = cleanUrl(lastHref);
-        if (cleaned !== location.href) {
-            history.replaceState(null, '', cleaned);
-        }
+        if (debounceTimer) return;
+        debounceTimer = setTimeout(() => {
+            debounceTimer = null;
+            if (location.href === lastHref) return;
+            const cleaned = cleanUrl(location.href);
+            if (cleaned !== location.href) {
+                origReplace(null, '', cleaned);
+            }
+            lastHref = location.href; // replaceState 后再同步
+        }, 50);
     };
 
-    // 全面监听策略
-    const observer = new MutationObserver(checkAndClean);
-    observer.observe(document, { subtree: true, childList: true });
+    // 事件监听（无需 MutationObserver）
     window.addEventListener('popstate', checkAndClean);
     window.addEventListener('hashchange', checkAndClean);
-})();
 
-console.log('%c BiliURLc %c Author/作者:LongSir', 'background: linear-gradient(120deg, #8183ff, #58b3f5);color:#fff;border-radius:2px;', '');
+    // 兜底定时器：捕获极少数未被代理拦截的 URL 变化
+    setInterval(checkAndClean, 2000);
+
+    console.log('%c BiliURLc %c Author/作者:LongSir', 'background: linear-gradient(120deg, #8183ff, #58b3f5);color:#fff;border-radius:2px;', '');
+})();
