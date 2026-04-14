@@ -1,12 +1,14 @@
 // ==UserScript==
 // @name         Bilibili-B站视频URL清理
 // @namespace    http://tampermonkey.net/
-// @version      0.2
-// @description  清除B站视频链接不必要的参数
+// @version      0.4
+// @description  清除B站视频、番剧、动态、直播链接不必要的参数
 // @author       LongSir
 // @license      MIT
 // @match        https://www.bilibili.com/video/*
 // @match        https://www.bilibili.com/bangumi/*
+// @match        https://www.bilibili.com/opus/*
+// @match        https://live.bilibili.com/*
 // @grant        none
 // @run-at       document-start
 // ==/UserScript==
