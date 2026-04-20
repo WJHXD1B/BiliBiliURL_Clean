@@ -9,6 +9,7 @@
 // @match        https://www.bilibili.com/bangumi/*
 // @match        https://www.bilibili.com/opus/*
 // @match        https://live.bilibili.com/*
+// @match        https://space.bilibili.com/*
 // @grant        none
 // @run-at       document-start
 // ==/UserScript==
