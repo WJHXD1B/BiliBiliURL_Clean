@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili-B站视频URL清理
 // @namespace    http://tampermonkey.net/
-// @version      0.4
+// @version      0.5
 // @description  清除B站视频、番剧、动态、直播链接不必要的参数
 // @author       LongSir
 // @license      MIT
